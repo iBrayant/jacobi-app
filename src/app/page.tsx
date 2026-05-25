@@ -18,18 +18,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AlertCircle, RefreshCw, Grid3X3, AlertTriangle } from "lucide-react";
-
-// IterationData
-// Define cómo luce cada fila de la tabla de resultados:
-// - k: número de iteración
-// - x: el vector solución en esa iteración (todos los valores x1, x2, x3...)
-// - error: qué tan lejos estamos de la solución real (null en la iteración 0)
-
-interface IterationData {
-  k: number;
-  x: number[];
-  error: number | null;
-}
+import { calculateJacobi, IterationData } from "../math/jacobi";
 
 export default function JacobiMethodApp() {
 
@@ -127,121 +116,20 @@ export default function JacobiMethodApp() {
 
     try {
 
-      // PASO 1: Convertir entradas de texto a números reales
-      // Los campos del formulario siempre devuelven texto (strings).
-      // Los convertimos a números para poder hacer operaciones matemáticas.
-      const A = matrix.map(row => row.map(val => parseFloat(val))); // Matriz A como números
-      const b = vector.map(val => parseFloat(val));                  // Vector b como números
-      const tolerance = parseFloat(tol);
-      const maxI = parseInt(maxIter);
+      // Llamada al módulo matemático aislado
+      const result = calculateJacobi(matrix, vector, tol, maxIter);
 
-      // Validamos que todos los valores sean números válidos
-      if (A.some(row => row.some(val => isNaN(val))) || b.some(val => isNaN(val))) {
-        throw new Error("La matriz y el vector deben contener valores numéricos válidos.");
+      if (result.errorMsg) {
+        setErrorMsg(result.errorMsg);
       }
-      if (isNaN(tolerance) || tolerance <= 0) {
-        throw new Error("La tolerancia debe ser un número positivo.");
-      }
-      if (isNaN(maxI) || maxI <= 0) {
-        throw new Error("El máximo de iteraciones debe ser un entero positivo.");
+      if (result.warningMsg) {
+        setWarningMsg(result.warningMsg);
       }
 
-      // PASO 2: Verificar si la matriz es diagonal dominante
-      // El Método de Jacobi garantiza convergencia cuando la matriz es
-      // "estrictamente diagonal dominante": esto significa que el valor
-      // absoluto del elemento diagonal de cada fila debe ser MAYOR que la
-      // suma de los valores absolutos del resto de elementos en esa fila.
-      // Si no se cumple, el método puede igualmente funcionar, pero lo
-      // advertimos al usuario con un mensaje en amarillo.
-      // Además, si algún elemento diagonal es 0, el método es imposible
-      // (dividiríamos entre cero en la fórmula), así que lanzamos un error.
-      let isDominant = true;
-      for (let i = 0; i < n; i++) {
-        let sum = 0;
-        for (let j = 0; j < n; j++) {
-          if (i !== j) sum += Math.abs(A[i][j]); // Suma de los elementos fuera de la diagonal
-        }
-        if (Math.abs(A[i][i]) <= sum) {
-          isDominant = false;
-          if (A[i][i] === 0) {
-            throw new Error(`El elemento en la diagonal principal A[${i + 1}][${i + 1}] es 0. El método de Jacobi no se puede aplicar.`);
-          }
-        }
-      }
-
-      if (!isDominant) {
-        setWarningMsg("Advertencia: La matriz no es estrictamente diagonal dominante. El método puede no converger.");
-      }
-
-      //PASO 3: Ciclo iterativo del Método de Jacobi
-      // El método empieza con una suposición inicial: x = [0, 0, 0, ...]
-      // Luego aplica repetidamente la fórmula de Jacobi para refinar la solución.
-      // Es decir: para calcular cada nueva x_i, usamos TODOS los valores
-      // de la iteración ANTERIOR. Esto es lo que diferencia a Jacobi de
-      // Gauss-Seidel (que usa valores mezclados del paso actual y anterior).
-
-      let x_old = Array(n).fill(0); // Vector inicial: todas las incógnitas valen 0
-      let k = 0;
-      let iterData: IterationData[] = [];
-
-      // Guardamos la iteración 0 (el punto de partida) en la tabla
-      iterData.push({ k: 0, x: [...x_old], error: null });
-
-      let currentError = 100; // Error inicial grande para que el ciclo arranque
-      let hasConverged = false;
-      let x_new = Array(n).fill(0); // Vector donde guardamos los nuevos valores calculados
-
-      do {
-        k++;
-
-        // Calculamos todos los nuevos x_i usando los valores del paso anterior (x_old)
-        for (let i = 0; i < n; i++) {
-          let sum = 0;
-          for (let j = 0; j < n; j++) {
-            if (i !== j) sum += A[i][j] * x_old[j]; // Suma de los términos que NO son la diagonal
-          }
-          // Aplicamos la fórmula de Jacobi para obtener el nuevo x_i
-          x_new[i] = (b[i] - sum) / A[i][i];
-        }
-
-        // Calcular error
-        // Usamos el error relativo: cuánto cambió la solución en esta iteración
-        // comparado con el valor más grande del nuevo vector.
-        // Esto normaliza el error sin importar la magnitud de los números.
-        let maxDiff = 0; // La diferencia más grande entre x_new y x_old
-        let maxNew = 0;  // El valor más grande en x_new (para normalizar)
-        for (let i = 0; i < n; i++) {
-          let diff = Math.abs(x_new[i] - x_old[i]);
-          if (diff > maxDiff) maxDiff = diff;
-          let absNew = Math.abs(x_new[i]);
-          if (absNew > maxNew) maxNew = absNew;
-        }
-
-        currentError = maxNew === 0 ? 0 : maxDiff / maxNew; // Error relativo
-
-        // El vector nuevo se convierte en el viejo para la próxima iteración
-        x_old = [...x_new];
-
-        // Guardamos esta iteración en la tabla de resultados
-        iterData.push({ k: k, x: [...x_old], error: currentError });
-
-        // Si el error ya es menor que la tolerancia pedida, convergimos → paramos.
-        if (currentError < tolerance) {
-          hasConverged = true;
-          break;
-        }
-
-      } while (k < maxI); // Si no convergió, seguimos hasta el máximo de iteraciones
-
-      // PASO 4: Publicar los resultados
-      setResults(iterData); // Enviamos la tabla completa de iteraciones
-
-      if (hasConverged) {
+      setResults(result.results);
+      if (result.hasConverged) {
         setConverged(true);
-        setSolution([...x_old]); // Guardamos la solución final encontrada
-      } else {
-        // Se agotaron las iteraciones sin alcanzar la tolerancia
-        setErrorMsg("No converge: Se alcanzó el número máximo de iteraciones.");
+        setSolution(result.solution);
       }
 
     } catch (err: any) {
