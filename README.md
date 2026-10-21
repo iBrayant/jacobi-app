@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Método de Jacobi
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwindcss&logoColor=white)
+![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
-First, run the development server:
+Calculadora web del **método iterativo de Jacobi** para resolver sistemas de ecuaciones lineales `Ax = b`. Ingresas la matriz, el vector de términos independientes, la tolerancia y el máximo de iteraciones, y la app muestra la solución, la tabla de iteraciones y la gráfica de convergencia del error.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> Proyecto académico — Ingeniería de Sistemas y Computación, Universidad de Cundinamarca.
+
+<!-- TODO: captura o GIF de la app (guardar en docs/img/) -->
+<!-- ![Demo](docs/img/demo.png) -->
+<!-- TODO: enlace a la demo desplegada en Vercel -->
+
+## Características
+
+- **Sistemas de tamaño variable:** elige la dimensión `n × n` y edita la matriz `A` y el vector `b` en una cuadrícula interactiva.
+- **Verificación de diagonal dominante:** avisa si la matriz no es estrictamente diagonal dominante, condición que garantiza la convergencia.
+- **Tabla de iteraciones** con el vector `x` y el error de cada paso.
+- **Gráfica de convergencia** del error por iteración (Recharts).
+- **Fórmulas en LaTeX** renderizadas con KaTeX.
+- **Manejo de errores:** valida entradas no numéricas, tolerancia o iteraciones inválidas, ceros en la diagonal principal y falta de convergencia.
+- **Lógica separada de la interfaz:** el algoritmo vive en `src/math/jacobi.ts`, comentado paso a paso.
+
+## El método
+
+Para cada incógnita se despeja su ecuación usando **solo los valores de la iteración anterior**, a diferencia de Gauss-Seidel:
+
+```
+x_i^(k+1) = ( b_i − Σ_{j≠i} a_ij · x_j^(k) ) / a_ii
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+El error relativo se calcula con la norma infinito:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+ε = max|x^(k+1) − x^(k)| / max|x^(k+1)|
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+La iteración arranca en el vector cero y se detiene cuando `ε` es menor que la tolerancia o se alcanza el máximo de iteraciones.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+Next.js (App Router) · React · TypeScript · Tailwind CSS · KaTeX · Recharts · math.js · Lucide
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estructura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/page.tsx      -> interfaz: matriz, parámetros, tabla y gráfica
+└── math/jacobi.ts    -> algoritmo de Jacobi (sin dependencias de React)
+```
 
-## Deploy on Vercel
+## Cómo correrlo
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Abre http://localhost:3000. Para compilar: `npm run build && npm start`.
+
+## Ejemplo
+
+El sistema que carga la app por defecto:
+
+```
+ 10x + 2y −  z =  27
+ −3x − 6y + 2z = −61.5
+   x +  y + 5z = −21.5
+```
+
+es diagonal dominante y converge a `x = 0.5`, `y = 8`, `z = −6`.
+
+## Autor
+
+**Brayant Vásquez Gómez** · [GitHub](https://github.com/iBrayant) · [LinkedIn](https://linkedin.com/in/brayant-vásquez-gómez)
+
+Licencia [MIT](LICENSE).
